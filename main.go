@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -124,8 +125,22 @@ func main() {
 			log.Fatal("read:", err)
 			return
 		}
-		log.Printf("recv: %s", message)
-		// TODO: parse AnnounceResponse & set RemoteDescription
+		var buf bytes.Buffer
+		json.Indent(&buf, message, "  ", "  ")
+		log.Printf("received message from tracker: %s", buf.String())
+
+		var ar AnnounceResponse
+		if err := json.Unmarshal(message, &ar); err != nil {
+			log.Printf("error unmarshalling announce response: %v", err)
+			continue
+		}
+		if ar.Answer == nil {
+			continue
+		}
+		if err := peerConnection.SetRemoteDescription(*ar.Answer); err != nil {
+			log.Printf("error setting remote description: %v", err)
+			continue
+		}
 	}
 }
 
